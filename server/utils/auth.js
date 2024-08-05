@@ -1,8 +1,15 @@
+const { GraphQLError } = require('graphql');
 const jwt = require('jsonwebtoken');
 
 // set token secret and expiration date
-const secret = 'mysecretsshhhhh';
-const expiration = '2h';
+const secret = process.env.SECRET || 'mysecretsshhhhh';
+const expiration = process.env.EXPIRATION || '2h';
+
+const AuthenticationError = new GraphQLError('Could not authenticate user.', {
+  extensions: {
+    code: 'UNAUTHENTICATED',
+  },
+});
 
 module.exports = {
   // function for our authenticated routes
@@ -23,17 +30,18 @@ module.exports = {
     try {
       const { data } = jwt.verify(token, secret, { maxAge: expiration });
       req.user = data;
-    } catch {
-      console.log('Invalid token');
+    } catch (error) {
+      console.log('Invalid token:', error);
       return res.status(400).json({ message: 'invalid token!' });
     }
 
     // send to next endpoint
     next();
   },
-  signToken: function ({ username, email, _id }) {
-    const payload = { username, email, _id };
+  signToken: function ({ email, name, _id }) {
+    const payload = { email, name, _id };
 
     return jwt.sign({ data: payload }, secret, { expiresIn: expiration });
   },
+  AuthenticationError,
 };
